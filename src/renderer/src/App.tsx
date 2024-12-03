@@ -27,6 +27,7 @@ function App(): JSX.Element {
           </a>
         </div>
       </div>
+
       <Versions></Versions>
     </>
   )
