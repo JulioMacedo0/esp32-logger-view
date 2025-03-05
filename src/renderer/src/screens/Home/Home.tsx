@@ -1,9 +1,15 @@
 import { SerialPort } from 'serialport'
 import { useEffect, useRef, useState } from 'react'
-import { NavLink } from 'react-router'
+import { processSerialData } from '@renderer/helpers/process-serial'
+import { sendSerialCommand } from '@renderer/helpers/send-serial-command'
+
 type log = {
   message: string
   timestemp: string
+}
+
+const delay = (ms: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 export function Home(): JSX.Element {
@@ -16,7 +22,7 @@ export function Home(): JSX.Element {
       message,
       timestemp: new Date().toLocaleTimeString()
     }
-    console.log(message)
+
     setLogs((prevLogs) => [...prevLogs, log])
   }
 
@@ -32,7 +38,10 @@ export function Home(): JSX.Element {
   }, [logs])
 
   const ConnetToEsp32 = async (ref: React.MutableRefObject<SerialPort | null>): Promise<void> => {
-    console.log(ref.current?.opening)
+    if (ref.current?.opening) {
+      await delay(500)
+      return ConnetToEsp32(ref)
+    }
     const ports = await SerialPort.list()
 
     const myDevice = ports.find(
@@ -53,15 +62,24 @@ export function Home(): JSX.Element {
           serialPort.write('ON\n')
         }
       )
+      serialPort.on('open', () => {
+        console.log('port open')
+      })
 
-      serialPort.on('data', (data) => addLog(`data from esp32:${data}`))
-      serialPort.on('close', () => {
-        addLog('Device disconnected, try to connect...')
+      serialPort.on('data', (data) => {
+        processSerialData(data)
+        addLog(data.toString())
+      })
+
+      serialPort.on('close', async () => {
+        addLog('[close] Device disconnected, try to connect...')
+        await delay(500)
         ConnetToEsp32(ref)
       })
       ref.current = serialPort
     } else {
-      addLog('Device not found, try to connect...')
+      addLog('[else] Device not found, try to connect...')
+      await delay(500)
       ConnetToEsp32(ref)
     }
   }
@@ -70,41 +88,33 @@ export function Home(): JSX.Element {
     ConnetToEsp32(port)
   }, [])
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      sendSerialCommand('PING', port?.current)
+    }, 1000)
+
+    return (): void => {
+      clearInterval(intervalId)
+      console.log('Intervalo cancelado')
+    }
+  }, [port])
+
   return (
     <div className="min-h-screen bg-gray-300 p-4 flex flex-col items-center gap-4">
       <h1 className="text-2xl font-bold text-gray-800">ESP32 Serial Monitor</h1>
       <div className="flex gap-4">
         <button
           className="px-4 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700"
-          onClick={() =>
-            port.current?.write('ON\n', (err) => {
-              if (err) {
-                addLog(`Error: ${err.message}`)
-                return
-              }
-              addLog('Command sent: ON')
-            })
-          }
+          onClick={() => sendSerialCommand('FORWARD', port?.current)}
         >
           ON
         </button>
         <button
           className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700"
-          onClick={() =>
-            port.current?.write('OFF\n', (err) => {
-              if (err) {
-                addLog(`Error: ${err.message}`)
-                return
-              }
-              addLog('Command sent: OFF')
-            })
-          }
+          onClick={() => sendSerialCommand('STOP', port?.current)}
         >
           OFF
         </button>
-        <NavLink to="/test" end>
-          test route
-        </NavLink>
         <button
           className="px-4 py-2 bg-yellow-600 text-white font-bold rounded-lg hover:bg-red-700"
           onClick={async () => {
