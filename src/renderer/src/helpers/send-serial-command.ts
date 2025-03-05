@@ -1,7 +1,8 @@
 import { COMMAND, COMMANDS, END_BYTE, START_BYTE } from '@renderer/constants/commands'
 import { SerialPort } from 'serialport'
 
-export function sendSerialCommand(port: SerialPort, command: COMMAND): void {
+export function sendSerialCommand(command: COMMAND, port: SerialPort | null): void {
+  if (!port) return
   const cmdByte = COMMANDS[command]
 
   const frame = new Uint8Array([START_BYTE, cmdByte, END_BYTE])
