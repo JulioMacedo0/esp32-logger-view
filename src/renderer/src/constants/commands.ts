@@ -1,5 +1,5 @@
-export const STX = 0x02
-export const ETX = 0x03
+export const START_BYTE = 0x02
+export const END_BYTE = 0x03
 
 export type COMMAND = 'FORWARD' | 'REVERSE' | 'STOP' | 'PING' | 'PONG'
 export type RESPONSE = 'PONG'
