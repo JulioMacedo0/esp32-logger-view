@@ -1,7 +1,7 @@
 import { END_BYTE, START_BYTE, RESPONSES } from '@renderer/constants/commands'
 
 let serialBuffer: Buffer = Buffer.alloc(0)
-let count = 0
+
 export function processSerialData(data: Buffer): void {
   serialBuffer = Buffer.concat([serialBuffer, data])
 
@@ -31,8 +31,7 @@ export function processSerialData(data: Buffer): void {
 
 function handleCommand(command: Buffer): void {
   if (command[0] == RESPONSES.PONG) {
-    count++
-    console.log(`Resposta válida: ${command[0]}  ${count} validos`)
+    console.log(`Resposta válida: ${command[0]} `)
   } else {
     console.warn(`Comando desconhecido ${command[0].toString()} == ${RESPONSES.PONG}`)
   }
