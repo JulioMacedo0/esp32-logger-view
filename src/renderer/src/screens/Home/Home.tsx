@@ -2,6 +2,7 @@ import { SerialPort } from 'serialport'
 import { useEffect, useRef, useState } from 'react'
 import { processSerialData } from '@renderer/helpers/process-serial'
 import { sendSerialCommand } from '@renderer/helpers/send-serial-command'
+import { usePresenceStore } from '@renderer/stores/presence-store'
 
 type log = {
   message: string
@@ -15,6 +16,7 @@ const delay = (ms: number): Promise<void> => {
 export function Home(): JSX.Element {
   const port = useRef<SerialPort | null>(null)
   const divRef = useRef<HTMLDivElement | null>(null)
+  const { isActive } = usePresenceStore()
   const [logs, setLogs] = useState<log[]>([])
 
   const addLog = (message: string): void => {
@@ -95,13 +97,14 @@ export function Home(): JSX.Element {
 
     return (): void => {
       clearInterval(intervalId)
-      console.log('Intervalo cancelado')
+      console.log('cancel interval')
     }
   }, [port])
 
   return (
     <div className="min-h-screen bg-gray-300 p-4 flex flex-col items-center gap-4">
       <h1 className="text-2xl font-bold text-gray-800">ESP32 Serial Monitor</h1>
+      <h2>{`detection ${isActive}`}</h2>
       <div className="flex gap-4">
         <button
           className="px-4 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700"
@@ -114,18 +117,6 @@ export function Home(): JSX.Element {
           onClick={() => sendSerialCommand('STOP', port?.current)}
         >
           OFF
-        </button>
-        <button
-          className="px-4 py-2 bg-yellow-600 text-white font-bold rounded-lg hover:bg-red-700"
-          onClick={async () => {
-            const ports = await SerialPort.list()
-            ports.forEach((port) => {
-              const objString = JSON.stringify(port)
-              addLog(objString)
-            })
-          }}
-        >
-          log ports
         </button>
       </div>
       <div
