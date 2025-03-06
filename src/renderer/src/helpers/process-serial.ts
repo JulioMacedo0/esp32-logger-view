@@ -1,4 +1,6 @@
-import { END_BYTE, START_BYTE, RESPONSES } from '@renderer/constants/commands'
+import { END_BYTE, START_BYTE, RESPONSES, LOG_START_BYTE } from '@renderer/constants/commands'
+import { useLogStore } from '@renderer/stores/log-store'
+
 import { usePresenceStore } from '@renderer/stores/presence-store'
 
 let serialBuffer: Buffer = Buffer.alloc(0)
@@ -8,25 +10,47 @@ export function processSerialData(data: Buffer): void {
 
   while (serialBuffer.length > 0) {
     const startIndex = serialBuffer.indexOf(START_BYTE)
-    if (startIndex === -1) {
+    const logStartIndex = serialBuffer.indexOf(LOG_START_BYTE)
+
+    if (startIndex === -1 && logStartIndex === -1) {
       serialBuffer = Buffer.alloc(0)
       return
     }
 
-    if (startIndex > 0) {
-      serialBuffer = serialBuffer.slice(startIndex)
+    const firstIndex = Math.min(
+      startIndex === -1 ? Infinity : startIndex,
+      logStartIndex === -1 ? Infinity : logStartIndex
+    )
+
+    if (firstIndex > 0) {
+      serialBuffer = serialBuffer.slice(firstIndex)
     }
 
-    const endIndex = serialBuffer.indexOf(END_BYTE, 1)
-    if (endIndex === -1) {
-      return
+    if (serialBuffer[0] === LOG_START_BYTE) {
+      const endIndex = serialBuffer.indexOf(END_BYTE, 1)
+      if (endIndex === -1) {
+        return
+      }
+
+      const logData = serialBuffer.slice(1, endIndex)
+      const logMessage = logData.toString('utf8')
+      useLogStore.getState().addLog(logMessage)
+
+      serialBuffer = serialBuffer.slice(endIndex + 1)
+      continue
     }
 
-    const command = serialBuffer.slice(1, endIndex)
+    if (serialBuffer[0] === START_BYTE) {
+      const endIndex = serialBuffer.indexOf(END_BYTE, 1)
+      if (endIndex === -1) {
+        return
+      }
 
-    handleCommand(command)
+      const command = serialBuffer.slice(1, endIndex)
+      handleCommand(command)
 
-    serialBuffer = serialBuffer.slice(endIndex + 1)
+      serialBuffer = serialBuffer.slice(endIndex + 1)
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 export const START_BYTE = 0x02
 export const END_BYTE = 0x03
+export const LOG_START_BYTE = 0x04
 
 export type COMMAND = 'FORWARD' | 'REVERSE' | 'STOP' | 'PING' | 'PONG'
 export type RESPONSE = 'PONG' | 'CMD_DETECTION_ON' | 'CMD_DETECTION_OFF'

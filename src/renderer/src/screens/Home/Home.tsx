@@ -1,13 +1,9 @@
 import { SerialPort } from 'serialport'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { processSerialData } from '@renderer/helpers/process-serial'
 import { sendSerialCommand } from '@renderer/helpers/send-serial-command'
 import { usePresenceStore } from '@renderer/stores/presence-store'
-
-type log = {
-  message: string
-  timestemp: string
-}
+import { useLogStore } from '@renderer/stores/log-store'
 
 const delay = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -17,16 +13,7 @@ export function Home(): JSX.Element {
   const port = useRef<SerialPort | null>(null)
   const divRef = useRef<HTMLDivElement | null>(null)
   const { isActive } = usePresenceStore()
-  const [logs, setLogs] = useState<log[]>([])
-
-  const addLog = (message: string): void => {
-    const log = {
-      message,
-      timestemp: new Date().toLocaleTimeString()
-    }
-
-    setLogs((prevLogs) => [...prevLogs, log])
-  }
+  const { logs, addLog } = useLogStore()
 
   const scrollToBottom = (): void => {
     divRef.current?.scroll({
@@ -68,10 +55,7 @@ export function Home(): JSX.Element {
         console.log('port open')
       })
 
-      serialPort.on('data', (data) => {
-        processSerialData(data)
-        addLog(data.toString())
-      })
+      serialPort.on('data', processSerialData)
 
       serialPort.on('close', async () => {
         addLog('[close] Device disconnected, try to connect...')
@@ -80,7 +64,7 @@ export function Home(): JSX.Element {
       })
       ref.current = serialPort
     } else {
-      addLog('[else] Device not found, try to connect...')
+      //  addLog('[else] Device not found, try to connect...')
       await delay(500)
       ConnetToEsp32(ref)
     }
@@ -128,7 +112,7 @@ export function Home(): JSX.Element {
         ) : (
           logs.map((log, index) => (
             <p key={index}>
-              <span className="text-gray-400">[{log.timestemp}]</span> {log.message}
+              <span className="text-gray-400">[{log.timestamp}]</span> {log.message}
             </p>
           ))
         )}
